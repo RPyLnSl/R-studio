@@ -8,5 +8,5 @@ R financial
   - 編寫基本機器學習入門 : random forest , svm , rpart
 - What ?
 
--Other ?
+- Other ?
    - 时间序列分析 (TimeSeries.Rmd)
