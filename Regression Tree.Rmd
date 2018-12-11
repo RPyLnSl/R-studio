@@ -1,0 +1,152 @@
+---
+title: "Regression Tree"
+author: "Boon Hong"
+date: "November 2, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+source("pgload.R")
+```
+
+```{r}
+stringz <- "我們 United States"
+str_view_all(stringz,"([a-z]|[A-Z])+")
+grep(pattern = "([a-z]|[A-Z])+",x = stringz,value = T)
+
+```
+
+```{r results='hide'}
+import("DataCourse.csv") -> df
+for(i in 4:length(df)){
+ df[,i] <- as.numeric(gsub(",","",df[,i]))
+}
+df %>% 
+  head
+df %>%
+  as.tibble()-> df
+df %>% 
+  head
+df %$%
+  # shapiro.test(exhibition)
+  cor.test(exhibition,Exhibition)
+
+df[,-2] -> df
+df[,-4] -> df
+df[,-11] -> df
+df[,-4] -> df
+df[,-9] -> df
+df[,-4] -> df
+df %>% 
+  head
+df %>% 
+  select(GDP:Exhibition) %>% 
+    cor()
+df %>% 
+  select(GDP:Exhibition) %>% 
+  scatterplotMatrix(df)
+df %>% 
+  select(GDP:Exhibition) -> model_data
+
+# model_data %>%
+  # ggplot(aes())+
+    # geom_point()
+df %>% 
+  select(GDP:Exhibition) -> model_data
+  lm(GDP~.,model_data) %>% 
+  summary()
+  lm(GDP~.,model_data) -> model 
+
+  anova(model)
+  model %>% 
+    summary
+  # 有足夠的證據推翻虛假???,整體模型是顯著的
+model_data %$%
+  lm(GDP~1) -> x
+model_data %$%
+  lm(GDP~.,.) -> y
+anova(x,y)
+    # X 變數之間存在差異性 because >> p-value reject 
+rm(x,y)
+  df %>%  
+  # cor(GDP,Visit)
+  ggplot(aes(Visit,GDP)) + 
+    geom_point()
+df %>% 
+  select(GDP:Exhibition) %>% 
+  gather(Visit:Exhibition,convert = T,key="Class",value = "Value") %>% 
+  ggplot(aes(Value,GDP,color=Class))+
+  geom_point(position = "jitter") -> g
+ggplotly(g)
+  # geom_abline(data = model,intercept = coef(model)[[1]])
+confint(model) # visit ，每改變一單位 , GDP 在95%信賴區間[0.008,0.1391]中改變
+df %>% .$GDP
+fitted(model) %>% 
+  plot(type="l")
+# residuals(model) %>% plot(type="l")
+par(mfrow=c(2,2))
+plot(model)
+dev.off()
+qqPlot(model,id.method="identity")
+model %>% 
+  crPlots()
+# plot(dfx$GDP,dfx$Value)
+# abline(model)
+scatterplot(model,df$GDP)
+```
+
+```{r}
+library(gvlma)
+gvmodel <- gvlma(model)
+summary(gvmodel)
+
+# 如果結果 Assumptions NOT satisfied! 怎???了解違反那些假設條件 使得結果 
+```
+
+```{r}
+outlierTest(model) 
+influenceIndexPlot(model,id.method="identify")
+ sqrt(vif(model)) > 2 # 是否存在多重共???性
+```
+
+```{r}
+model %>% 
+  summary
+# 尋找 中介效果
+df 
+df %>%
+  select(GDP:Exhibition) %>% 
+  export("dataCourseMulitiLinerRegression.csv")
+import("dataCourseMulitiLinerRegression.csv") %>% 
+  head
+df %>%
+  select(GDP:Exhibition) -> d1  
+d1 %$%
+  lm(GDP~Visit) %>% 
+  summary() # y ~ x reject 
+d1 %$%
+  lm(Conferences ~ Visit) %>% 
+  summary() # m ~ x reject
+d1 %$%
+  lm(Study ~ Visit) %>% 
+  summary # m1 ~ x reject 
+d1 %$%
+  lm(Exhibition ~ Visit) %>% 
+  summary() # m2 ~ x retain , so m2 can't use
+d1 %$%
+  lm(GDP~Visit+Conferences) %>% 
+  summary  # 結果 沒有中介效果 只有直接效果，同時沒有調節效果
+d1 %$% 
+  lm(GDP~Visit+Study) %>% 
+  summary() # 結果 只有直接效果沒有中介效果，同時沒有調節效果
+# 調節效果 
+
+# 得知說GDP ~ Visit 結果顯著
+# 沒有調節效果 
+
+  
+```
+
+

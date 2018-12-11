@@ -1,0 +1,105 @@
+---
+title: "MachineLearning"
+author: "Boon Hong"
+date: "October 20, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+logging : 2018-10-02  `R now()`
+
+```{r eval=FALSE, include=FALSE}
+install.packages("arm")
+install.packages("glmnet")
+install.packages("igraph")
+install.packages("lme4")
+install.packages("RJSONIO")
+install.packages("tm")
+```
+
+```{r setup , message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(arm)  # 建立多層回歸模型
+library(glmnet) # Lasso 與 elastic-net 正則化廣義???性模型
+library(igraph) # 簡單圖與網絡分析工具呈現社群網絡
+library(lme4) # 建立???性與廣義混和效應模型
+library(RJSONIO) # 分析網頁API與輸出資料
+library(tm) #文本挖掘指令集 處理非結構化資料
+library(rio) # 存資料集
+detach("package:tidyverse")
+
+```
+
+```{r cleaning data}
+# import("ufo_awesome.tsv") %>% 
+  # as_tibble() -> ufo
+read.delim("ufo_awesome.tsv",sep="\t",stringsAsFactors = F,header = F,na.strings = "") -> ufo
+
+names(ufo) <- c("DataOccurred","DateReported","Location","ShortDescription","Duration","LongDescription")
+sample(nrow(ufo)*0.12) -> x 
+  ufo[x,] -> Nufo
+  ufo[-x,] -> Tufo
+   
+  (nrow(Tufo)*0.12) %>% 
+    round(0) %>% 
+      sample(replace = F) %>%
+        Tufo[.,] -> N2ufo
+  Nufo %>% 
+    nrow()
+
+  N2ufo %>% 
+    nrow()
+  
+  
+# ufo %>%
+Nufo %>%   
+  select(DataOccurred) %>% 
+  transmute(ymd(DataOccurred)) %>% 
+  is.na() %>% 
+  sum() -> y2
+Nufo %>% 
+  nrow() -> y3
+(y2/y3)*100
+
+N2ufo %>% 
+  select(DataOccurred) %>%
+  transmute(ymd(DataOccurred)) %>% 
+  is.na() %>% 
+  sum -> y1
+
+N2ufo %>% 
+  nrow() -> y 
+  (y1/y)*100
+  
+  
+  mutate(DataOccurred = ymd(DataOccurred),DateReported=ymd(DateReported))
+
+  summary(DataOccurred)
+```
+
+```{r}
+
+import("01_heights_weights_genders.csv") -> height
+height %>% 
+  mutate(Male = ifelse(Gender=="Male",1,0)) -> df 
+df %>% 
+  class
+glm( Male ~ Weight+Height,df,family = binomial()) -> logit.model
+df %>% 
+  ggplot(aes(Height,Weight)) + 
+  geom_point(aes(color = Gender,alpha=0.01)) +
+  # scale_alpha(guide = "none") + 
+  # scale_color_manual(values = c("Male" = "black", "Female" = "gray")) +
+    # geom_abline(intercept = -coef(linesModel)[1] / coef(linesModel)[2],
+    #           slope = - coef(linesModel)[3] / coef(linesModel)[2],
+    #           color = 'black')
+    geom_abline(intercept = -coef(logit.model)[1] / coef(logit.model)[2],
+              slope = - coef(logit.model)[3] / coef(logit.model)[2],
+              color = 'black')
+
+```
+
+glm 是處理分類的問題 ， family = binomial 分離超平面 (separating hyperplane) or 決策邊界 (decision boundary)
+

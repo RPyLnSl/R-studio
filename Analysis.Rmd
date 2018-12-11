@@ -1,0 +1,110 @@
+---
+title: "Financial Analysis"
+author: "Boon Hong"
+date: "November 13, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+source("pgload.R")
+```
+
+```{r message=FALSE , warning=F}
+
+tw2330 <- getSymbols("2330.tw",auto.assign = F,warnings = T,from="2000-01-01")
+
+```
+
+
+```{r}
+names(tw2330) <- c("Open","High","Low","Close","Volume","Adjust")
+
+tw2330 %>% head
+tw2330 %>%
+  .$Close %>% 
+  is.na() %>% 
+  # which((.)==T)
+  sum  -> NAvalue
+tw2330 %>%
+  .$Close %>% 
+  length() -> AllValue
+
+NAvalue/AllValue # 資料損失程度
+na.omit(tw2330) -> tw2330
+
+tw2330 %>% 
+  index(tw2330) -> Date 
+  data.frame(Date,tw2330) %>% 
+    as.tibble() -> tw2330_DF
+rm(Date)
+
+p <- tw2330_DF %>%
+    # tail()
+    filter(Date > ymd("20180101")) %>% 
+    ggplot(aes(Date,Close)) + 
+    geom_line() +
+      labs(
+        title ="Trade"
+      )
+
+ggplotly(p)
+
+chart_Series(tw2330["2018"])
+add_BBands()
+add_MACD()
+quantmod::add_EMA()
+add_RSI()  -> x
+
+x
+
+
+```
+
+裏面太多資訊 ， 想要做一個 策略判斷  logging >> 讀相關 判定 
+
+```{r eval=FALSE, include=FALSE}
+
+
+# Price + Type 
+tw2330_DF %>%
+  select(Date,Open,Close,Volume) %>%
+  gather(Open:Volume,key="Type",value="price")  %>% 
+  filter( Date >= ymd("20180102") &  Date <= ymd("20180901")) %>%   group_by(Type) %>% 
+  mutate(Scale = scale(price)) %>% 
+  ggplot(aes(Date,Scale,color=Type)) + 
+  geom_line() +
+  facet_grid(Type~.)  # 缺點是標準化 以下完美解決
+
+tw2330_DF %>%
+  select(Date,Open,Close,Volume) %>%
+  gather(Open:Volume,key="Type",value="price")  %>% 
+  filter( Date >= ymd("20180102") &  Date <= ymd("20180901")) %>%   group_by(Type) %>% 
+  # mutate(Scale = scale(price)) %>% 
+  ggplot(aes(Date,price,color=Type)) + 
+  geom_line() +
+  facet_wrap(~Type,ncol = 1,scales = "free_y")  # great
+
+# Price
+# Price + Volume
+tw2330_DF %>%
+  select(Date,Open,Close,Volume) %>%  
+  gather(Open:Volume,key="Type",value="price") %>%  
+  filter( Date > ymd("20180101") & Type=="Volume" ) %>% 
+  ggplot(aes(Date,price)) + 
+  geom_line()
+
+# Price + Close
+tw2330_DF %>% 
+  gather(Open:Adjust,key="Type",value="Price") %>% 
+  filter(Date > ymd("20180101") & Type == "Close") %>% 
+  ggplot(aes(Date,Price)) + 
+  geom_line() -> p
+  ggplotly(p) 
+  system.time()
+rm(p)
+```
+
+
+

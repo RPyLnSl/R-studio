@@ -1,0 +1,353 @@
+---
+title: "R Financial"
+author: "Boon Hong"
+date: "November 17, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+source("pgload.R")
+```
+
+download  financial , check `NA` value and clear it 
+```{r}
+getSymbols("2330.tw",auto.assign = F,from = "2000-01-01") %>% 
+  na.omit() -> `tw 2330`
+names(`tw 2330`) <- c("open","high","low","close","volume","adjusted")
+`tw 2330` %>% 
+    is.na() %>% 
+    which((.) == T)
+# `tw 2330`
+```
+
+```{r}
+
+as_data_frame(`tw 2330`) -> `tw 2330 data frame`
+`tw 2330 data frame`$date <- as.Date(row.names(`tw 2330 data frame`))
+`tw 2330 data frame` %>% select(date,volume,everything())  %>% 
+  filter(volume>0)  -> `tw 2330 data frame`
+  # filter(volume>0 |!(is.na(volume))) # volume is not na 包含 0 
+```
+
+
+一星二陽K棒組合可以下列9個條件來刻劃：
+
+1.第t天的收盤價 > 第t天的開盤價
+2.第t-2天的收盤價 > 第t-2天的開盤價
+3.第t天的開盤價 > 第t-1天的收盤價*(1-0.01)
+4.第t天的開盤價 < 第t-1天的收盤價*(1+0.01)
+
+5.第t-2天的收盤價 > 第t-1天的開盤價*(1-0.01)
+
+6.第t-2天的收盤價 < 第t-1天的開盤價*(1+0.01)
+7.第t天的實體K棒長度(漲跌)為1%以上
+8.第t-1天的實體K棒長度(漲跌)為0.5%以下
+9.第t-2天的實體K棒長度(漲跌)為1%以上
+
+編寫交易條件 并且建搆 進場時間與價格
+
+```{r 編寫交易條件 并且建搆 進場時間與價格}
+`tw 2330 data frame` %>% 
+  mutate(
+      lastC = lag(close,1) , # last day 
+      aflastC = lag(close,2) , # after last day
+      lastO = lag(open,1) , # last open
+      aflastO = lag(open,2), # after last day open 
+      kbar = abs( close/open -1),
+      lastKbar = lag(kbar,1) ,
+      aflastKbar = lag(kbar,2)
+    ) %>% 
+      filter(
+        close > open ,  #1 
+        aflastC > aflastO , #2
+        open > lastC*0.09 , #3
+        open < lastC*1.01 , #4
+        aflastC > lastO * 0.09 , #5
+        aflastC < lastO * 1.01 , #6
+        kbar > 0.01 , #7
+        lastKbar < 0.005 , #8
+        aflastKbar > 0.01 #9
+      ) %>% 
+  select(indate = date ,buyprice = close) -> `insite table`
+  
+```
+
+發生收盤價跌破20日移動平均線的位置。收盤價跌破20日移動平均線在程式中的判斷條件為：
+
+t日的收盤價 < t日的20日移動平均線
+t-1日的收盤價 > t-1日的20日移動平均線
+
+建搆 出場時間與價格
+
+```{r}
+`tw 2330 data frame` %>%
+  mutate(
+    sma20 = SMA(close,20) ,
+    lastsm20 = sma20 ,
+    lastC = lag(close,1)
+  ) %>% 
+  filter(
+    close < sma20 ,
+    lastC > lastsm20
+  ) %>% 
+  select(outdate =date , sellprice = close) -> `outsite table`
+```
+
+```{r}
+`outsite table` %>% 
+  head
+
+`insite table` %>% 
+  head
+
+`trade detail table` <- NULL 
+for(ix in 1:nrow(`insite table`)){
+  indate  <- `insite table`$"indate"[ix]  # 取進場的日期
+  `outsite table` %>%  # 把出場的日期向量化
+    .$"outdate" -> outdate
+  outsite <- which(outdate > indate)[1]  # 把進場日期與 出場日期做比較拿最近時間
+  if(length(outsite)>0){  # 假如出場時間存在(用長度判斷)
+    # = 0 代表沒有出場時間
+    # 合并進場與出場時間
+    `trade detail table` = bind_rows(
+      `trade detail table` , bind_cols(
+        `insite table`[ix,] , `outsite table`[outsite,]  
+      )      
+    )
+  }
+    
+}
+
+`trade detail table` %>% 
+  head
+```
+
+一星二陽K棒組合策略績效分析
+
+計算每次交易的報酬率。含交易成本的報酬率算法為：
+
+Ret=  Ps???(1???Cs)/Pb???(1+Cb) ???1
+
+其中，Pb和Ps分別為買入價格及賣出價格，Cb和Cs則是買入和賣出交易成本，此處買賣交易成本設定為千分之二。
+
+```{r}
+`buy cost` <- 0.002
+`close cost` <- 0.002
+`trade detail table` %>% 
+  mutate(
+   ret = (sellprice*(1-`close cost`) / buyprice*(1+`buy cost`) )-1 ,
+   holddays = as.numeric(outdate-indate)
+  ) -> `trade detail table`
+`trade detail table` %>%  
+  head
+```
+
+策略績效表現衡量的指標，大致上有：
+
+1.平均報酬率
+2.交易次數
+3.勝率
+4.報酬率標準差
+5.最大報酬率
+6.最小報酬率
+7.平均持有日數
+
+```{r}
+`trade detail table` %>% 
+  summarise(
+    mean = mean(ret),
+    num = NROW(indate), # 2.這個策略交易的數量
+    `win rate %` = (sum(ret>0)/num)*100,
+    sd = sd(ret) ,
+    `max rate` = max(ret),
+    `min rate` = min(ret),
+    `mean holddays` = mean(holddays)
+    )
+```
+
+繪圖前提準備
+
+```{r}
+
+`tw 2330 data frame` %>% 
+  mutate(
+    sma5 = SMA(close,5),
+    sma20 = SMA(close,20),
+    sma60 = SMA(close,60)
+  ) -> `tw 2330 data frame`
+
+plotsample <- 1 
+
+`trade detail table` %>% head
+
+indate <- `trade detail table`$indate[plotsample]
+outdate <- `trade detail table`$outdate[plotsample]
+matchsite <- which(`tw 2330 data frame`$date == indate)-35
+plotStarDate <- `tw 2330 data frame`$date[
+  ifelse(
+    matchsite<1,
+    1,matchsite
+    )
+  ] # 避免超出範圍 ， 因???-35 如果是負數 ， 那就取date[1]
+matchsite <- which(`tw 2330 data frame`$date == outdate) +35
+plotEndDate <- `tw 2330 data frame`$date[
+  ifelse(
+      NROW(`tw 2330 data frame`$date) < matchsite ,
+      NROW(`tw 2330 data frame`$date) , matchsite
+    )
+  ]
+
+```
+
+```{r}
+`tw 2330 data frame` %>% 
+  filter(
+    date >= plotStarDate & date <= plotEndDate
+  ) -> tw2330
+
+  # 標準進場價位
+  rep(NA,length(tw2330$date)) -> tw2330$insite
+  tw2330$open[which(tw2330$date==(indate))-1] *0.97 -> tw2330$insite[which(tw2330$date==indate)]  # 進場前一天通知
+  
+  # 標注出場價位
+  rep(NA,length(tw2330$date)) -> tw2330$outsite
+  tw2330$close[which(tw2330$date==(outdate))-1] * 1.03 ->   tw2330$outsite[which(tw2330$date==outdate)] # 出場前一天通知
+  
+  xts(tw2330[,-1],order.by = as.Date(tw2330$date)) -> `tw2330 xts` 
+```
+
+```{r}
+
+chart_theme() -> mytheme
+mytheme$col$dn.col <- "red"
+mytheme$col$up.col <- "white"
+chart_Series(`tw2330 xts`,theme = mytheme) 
+add_Vo()
+add_TA(`tw2330 xts`$sma5,col = "black",on=1)
+add_TA(`tw2330 xts`$sma20,col="blue",on=1)
+add_TA(`tw2330 xts`$sma60,col="pink",on=1)
+add_TA(`tw2330 xts`$insite,col="black",on=1,pch=2,cex=5,type="p")
+add_TA(`tw2330 xts`$outsite,col="red",on=1,pch=6,cex=5,type="p")
+
+```
+
+使用 ggplot2 轉成 plotly 觀察每者之間的變化
+
+```{r eval=FALSE, include=FALSE}
+
+    tw2330 %>%
+      
+      ggplot(aes(date)) + 
+        geom_pointrange(aes(y=close,
+                            ymin=low,
+                            ymax=high,
+                            color=-close
+                            ),
+                        show.legend = F,
+                        shape=3
+                        ) +
+        geom_line(aes(y=sma5),color="red") +
+        geom_line(aes(y=sma20),color="orange")+
+        geom_line(aes(y=sma60),color="black")+
+        labs(title = "morning star") + 
+        geom_point(aes(y=insite),color="black",size=3,shape=2) +
+        geom_point(aes(y=outsite),color="black",size=3,shape=6) -> p
+        
+ggplotly(p)        
+        
+        
+
+```
+
+
+把程式碼 func 化
+
+```{r function}
+`sma Analysis` <- function(plotsample=1,graph="quantmod"){
+  
+  indate <- `trade detail table`$indate[plotsample]
+  outdate <- `trade detail table`$outdate[plotsample]
+  matchsite <- which(`tw 2330 data frame`$date == indate)-35
+  
+  plotStarDate <- `tw 2330 data frame`$date[
+    ifelse(
+      matchsite<1,
+      1,matchsite
+      )
+    ] # 避免超出範圍 ， 因???-35 如果是負數 ， 那就取date[1]
+  matchsite <- which(`tw 2330 data frame`$date == outdate) +35
+  plotEndDate <- `tw 2330 data frame`$date[
+    ifelse(
+        NROW(`tw 2330 data frame`$date) < matchsite ,
+        NROW(`tw 2330 data frame`$date) , matchsite
+      )
+    ]
+    
+  `tw 2330 data frame` %>% 
+  filter(
+    date >= plotStarDate & date <= plotEndDate
+  ) -> tw2330
+
+  # 標準進場價位
+  rep(NA,length(tw2330$date)) -> tw2330$insite
+  tw2330$open[which(tw2330$date==(indate))-1] *0.97 -> tw2330$insite[which(tw2330$date==indate)]  # 進場前一天通知
+  
+  # 標注出場價位
+  rep(NA,length(tw2330$date)) -> tw2330$outsite
+  tw2330$close[which(tw2330$date==(outdate))-1] * 1.03 ->   tw2330$outsite[which(tw2330$date==outdate)] # 出場前一天通知
+  
+  xts(tw2330[,-1],order.by = as.Date(tw2330$date)) -> `tw2330 xts` 
+  if(graph=="quantmod"){
+    chart_theme() -> mytheme
+    mytheme$col$dn.col <- "red"
+    mytheme$col$up.col <- "white"
+    chart_Series(`tw2330 xts`,theme = mytheme) 
+    add_Vo()
+    add_TA(`tw2330 xts`$sma5,col = "black",on=1)
+    add_TA(`tw2330 xts`$sma20,col="blue",on=1)
+    add_TA(`tw2330 xts`$sma60,col="pink",on=1)
+    add_TA(`tw2330 xts`$insite,col="black",on=1,pch=2,cex=5,type="p")
+    add_TA(`tw2330 xts`$outsite,col="red",on=1,pch=6,cex=5,type="p")
+  }else{
+    tw2330 %>%
+      ggplot(aes(date)) + 
+        geom_pointrange(aes(y=close,
+                            ymin=low,
+                            ymax=high,
+                            color=-close
+                            ),
+                        show.legend = F,
+                        shape=3
+                        ) +
+        geom_line(aes(y=sma5),color="red") +
+        geom_line(aes(y=sma20),color="orange")+
+        geom_line(aes(y=sma60),color="black")+
+        labs(title = "morning star") + 
+        geom_point(aes(y=insite),color="black",size=3,shape=2) +
+        geom_point(aes(y=outsite),color="black",size=3,shape=6) -> p
+        ggplotly(p)        
+  }
+  
+}
+
+```
+
+```{r}
+`sma Analysis`(3)
+```
+
+```{r}
+`sma Analysis`(3,graph = "plotly")
+```
+
+
+教材來源 :
+http://cm.nsysu.edu.tw/~msrc/wp/rmarkdown/%E4%B8%80%E6%98%9F%E4%BA%8C%E9%99%BDK%E6%A3%92%E7%B5%84%E5%90%88%E7%A8%8B%E5%BC%8F%E7%AF%84%E4%BE%8B.html
+
+RSI 策略分析
+```{r}
+
+```
+
