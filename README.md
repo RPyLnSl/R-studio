@@ -19,5 +19,5 @@ R financial
 - What ?
 
 - Other ?
-   - 多重綫性回歸 ( Regression Tree.Rmd) 中介效果,調節效果
+   - 多重綫性回歸 ( Regression Tree.Rmd ) 中介效果,調節效果
    - 时间序列分析 ( TimeSeries.Rmd )
