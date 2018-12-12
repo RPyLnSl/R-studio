@@ -1,0 +1,107 @@
+---
+title: "Random Forest"
+author: "Boon Hong"
+date: "December 12, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+library(randomForest)
+source("pgload.R")
+
+```
+
+random forest 入??? 
+
+```{r}
+
+str(iris)
+
+sample(nrow(iris),nrow(iris)*0.1) -> test
+
+iris[test,] -> iris.test 
+
+iris[-test,] -> iris.learning
+
+iris.learning %>% 
+  head
+
+iris.test %>% 
+  head
+
+randomForest(Species~., data = iris.learning) -> s 
+
+predict(s,iris.test) %>%
+  table(iris.test[,5]) 
+  sum
+
+predict(s,iris.test) %>% 
+  table(iris.test[,5]) %>%     
+    diag() %>% 
+      sum/sum(nrow(iris.test))*100
+
+```
+
+???例操作 
+
+```{r}
+
+df <- import("01_heights_weights_genders.csv") 
+
+df %>% 
+  str
+
+df %>% 
+  summary()
+
+df %<>% 
+  mutate(
+    Gender = as_factor(Gender)
+  ) %>% 
+  as.tibble()
+
+```
+估??????料???型必???是 factor
+
+是否具有 NA 值
+
+```{r}
+
+df %>% 
+  is.na() %>% 
+  which((.)==T)
+
+```
+
+10% test  , 90% learning 
+```{r}
+
+test <- sample(nrow(df) , nrow(df)*0.1 , replace = F)
+df.test <- df[test,]
+df.learning <- df[-test,]
+
+```
+
+```{r}
+
+df.learning %<>% 
+  as.tibble() 
+
+tree <- randomForest(Gender~.,df.learning,ntree=1500)
+
+predict(tree,df.test) %>% 
+  table(df.test$Gender) %>% 
+  diag() %>%
+  sum/nrow(df.test)*100 
+
+```
+
+89.4 %
+
+如何再提高准确度 ?
+
+如果???分群方法 ?  ex : svm
+
+

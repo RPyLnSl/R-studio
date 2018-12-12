@@ -1,0 +1,115 @@
+---
+title: "Svm"
+author: "Boon Hong"
+date: "December 12, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+
+# rm(list=ls())
+source("pgload.R")
+`load pg`("stat")
+data(iris)
+
+```
+
+生成 test 和 learning
+```{r}
+
+test <- sample(nrow(iris),nrow(iris)*0.1)
+iris.test <- iris[test,]
+iris.learning <- iris[-test,]
+
+```
+
+```{r}
+
+svm(Species~.,data=iris.learning,type="C-classification" , 
+    cost = 10 , gamma = 10) -> m1 
+
+predict(m1,iris.test) %>% 
+  table(iris.test$Species)
+
+```
+
+求出最適 gamma 和 cost 
+
+```{r}
+
+tune.svm(Species~.,data=iris.learning,gamma = 10^(-3:-1),cost = 10^(-1:1)) %>% 
+  summary()
+
+```
+
+Parameter tuning of ‘svm’:
+
+- sampling method: 10-fold cross validation 
+
+- best parameters:
+ gamma cost
+   0.1    1
+
+--------------------------
+
+Parameter tuning of ‘svm’:
+
+- sampling method: 10-fold cross validation 
+
+- best parameters:
+ gamma cost
+  0.01   10
+
+```{r}
+
+svm(Species~. , data=iris.learning,gamma = 0.1 , cost=1) -> m2
+
+predict(m2,iris.test) %>% 
+  table(iris.test$Species) 
+
+
+predict(m2,iris.test) %>% 
+  table(iris.test$Species) %>% 
+  diag() %>% 
+  sum/nrow(iris.test)*100
+
+```
+
+???例???用 svm 
+
+```{r}
+
+import("01_heights_weights_genders.csv") %>% 
+  as.tibble() %>% 
+  mutate( Gender =  as_factor(Gender)) -> df
+
+df %>% 
+  is.na() %>% 
+  which((.)==T)
+
+df.num_test <- sample(nrow(df),nrow(df)*0.1)
+df.learning <- df[-df.num_test,]
+df.test <- df[df.num_test,]
+
+```
+
+```{r}
+
+system.time(
+  x <- tune.svm(Gender~., data=df.learning,gamma = 10^(-3:-1),cost = 10^(-1:1))
+)
+
+x %>% 
+  summary()
+
+svm.model <- svm(Gender~.,data=df.learning,gamma= 0.01 , cost= 10) 
+predict(svm.model , df.test) %>% 
+  table(df.test$Gender) %>% 
+  diag() %>% 
+  sum / nrow(df.test)*100
+
+```
+
+92.5 % 
