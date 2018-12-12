@@ -6,7 +6,7 @@ R financial
 
 - 編寫市場金融策略 : 
    -  黃昏之星 ( R financial.Rmd )
-   -  SMA (Sma Analysis.Rmd)
+   -  SMA ( Sma Analysis.Rmd )
    -  RSI
    -  MACD
 - 編寫基本機器學習入門 : 
