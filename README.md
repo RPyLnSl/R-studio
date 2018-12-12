@@ -7,9 +7,9 @@ R financial
   - 編寫市場金融策略 :  黃昏之星 ( R financial.Rmd )
   - 編寫基本機器學習入門 : 
       - 監督式
-         - random forest ( Random Forest.Rmd ) 
-         - svm ( svm.Rmd ) 
-         - rpart
+           - random forest ( Random Forest.Rmd ) 
+           - svm ( svm.Rmd ) 
+           - rpart
       - 非監督式
    
 - What ?
