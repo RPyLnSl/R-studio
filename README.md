@@ -13,7 +13,7 @@ R financial
 - 監督式
      - random forest ( Random Forest.Rmd ) 
      - svm ( svm.Rmd ) 
-     - rpart
+     - c5.0 替代rpart 單根決策樹 ( rpart.Rmd)
 - 非監督式
 
 - What ?
