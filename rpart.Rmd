@@ -1,0 +1,67 @@
+---
+title: "rpart"
+author: "Boon Hong"
+date: "December 13, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+source("pgload.R")
+`load pg`("stat")
+```
+
+前置條件 c5.0
+
+```{r}
+library(C50)
+nrow(iris)*.1
+```
+
+```{r}
+c <- C5.0Control(
+  CF = 0.25 , # 信賴區間
+  minCases = 2 , 
+  sample = 0.9 # test 0.1 , learning 0.9 
+)
+```
+
+```{r}
+C5.0(iris[,-5],y=iris$Species , control = c) %>% 
+  summary()
+
+```
+
+實例 
+
+```{r}
+import("01_heights_weights_genders.csv") %>% 
+  as.tibble() %>% 
+  mutate(
+    Gender = as_factor(Gender)
+  ) -> df 
+
+c <- C5.0Control(
+  minCases = 2 , 
+  sample = 0.9
+)
+
+C5.0(x=df[,-1] , y = df$Gender , control = c) %>% 
+  summary() 
+  .$output -> x
+str_locate_all(x,"%") 
+
+str_sub(x,1300) %>% 
+  unlist() %>% 
+  str_split("%") %>% 
+  unlist() %>% 
+  .[1] %>% 
+  as.numeric(.)*(-1)+100
+
+```
+
+91.3
+
+
+
