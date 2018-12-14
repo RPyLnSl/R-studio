@@ -1,0 +1,128 @@
+---
+title: "purrr basic"
+author: "Boon Hong"
+date: "December 14, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+
+# rm(list=ls())
+data("mtcars")
+source("pgload.R")
+
+```
+
+
+```{r}
+
+mtcars %>% 
+  head
+apply(mtcars, 2, mean)
+
+```
+
+服务于减少循环、处理嵌套数据、多模型等应用需求。
+
+在前置
+
+```{r}
+
+mtcars %>% 
+  head
+
+iris %>% 
+  has_rownames()
+
+mtcars %>% 
+  has_rownames()
+
+mtcars %>%
+  rownames_to_column() %>% 
+  as.tibble() %>% 
+  select(-rowname) %>% 
+  map_df( scale ) %>% 
+  bind_cols("rowname" = rownames(mtcars)) %>% 
+  select(rowname , everything())
+
+
+
+mtcars %>% 
+  head
+
+
+```
+
+```{r}
+
+df <- data.frame(a=rep(c("x","y"),2),b=c("Rome", "Venice", "Barcelona", "Paris"))
+
+df %>% 
+  as.tibble() %>% 
+  group_by(a) %>% 
+  # summarise(
+  #   b = str_c(b,collapse = ", ")
+  # ) %>% 
+  nest() -> df1
+  mutate(
+    map_chr(data,~paste(.$b , collapse = ", "))
+  )
+  mutate(cityList = map_chr(data, ~paste(.$b, collapse = ", ")))
+  select(-data)
+
+  sapply(df1$data, function(x) paste(x$b, collapse = ","))
+```
+
+
+```{r}
+
+mtcars %>%
+  split(.$cyl) %>%   # from base R
+  map(~ lm(mpg ~ wt, data = .)) %>% 
+  map(summary) %>% 
+  map_dbl("r.squared")
+
+diamonds %>% 
+  as.tibble()  %>%  
+  group_by(cut) %>% 
+  nest %>% 
+  # unnest() %>% 
+  mutate(
+    lm = map(data,~ lm(z~x+y,data=.x)
+      ) 
+  ) %>%   
+  .$lm %>% 
+  # select(lm) %>% 
+  # jsonedit()
+  map(summary)
+
+tibble(
+  x = c(1, 1, 2, 2),
+  y = list("a", "b", "c", "d")
+) %>% 
+  unnest()
+
+
+```
+
+map(df , ~lm(z=x+y,data=.x))  only use .x 
+map(df , function(df){ lm(z~x+y,data = df) })
+listview << packages 
+map_*(x,"name")
+
+```{r}
+
+x <- 3
+y <- 6
+map2(x,y,mean)
+
+library(listviewer)
+
+
+```
+
+
+資料參考與學習 => https://zhuanlan.zhihu.com/p/26888325
+
