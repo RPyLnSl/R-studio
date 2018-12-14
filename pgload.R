@@ -1,6 +1,6 @@
 # source of function set or packages 
 
-# �򥻮M�� 
+# °ò¥»®M¥ó 
 options(prompt = "$ ")
 
 suppressMessages(
@@ -80,8 +80,15 @@ suppressMessages(
       require(car) # linear regression
     )
     suppressMessages(
-      require(e1071)
+      require(e1071) # svm etc some machine learning package 
     )
+    suppressMessages(
+      require(C50)
+    )
+    suppressMessages(
+      require(randomForest)
+    )
+    
     print("loading stat package")
   }
   else{
