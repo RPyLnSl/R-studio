@@ -1,0 +1,208 @@
+---
+title: "Use Time - series  analysis  libor data"
+author: "Boon Hong"
+date: "December 11, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+
+  source("pgload.R")
+  `load pg`("fin")
+  library(tseries)
+  import("USD3MTD156N.csv") -> df 
+  
+```
+
+```{r}
+
+df %>%
+  filter(DATE >= "2017-01-01") %>% 
+  mutate(
+    `string number` = str_length(VALUE) ,
+    VALUE  = ifelse(`string number` == 1 , NA , VALUE)
+    ) %>% 
+# df1[which((df1$`string number`==1)==T),]
+  as.tibble() -> df
+
+df %<>%
+  rename(date = DATE , t = VALUE) 
+
+```
+
+```{r}
+
+df %<>%
+  select(date , t ) %>% 
+  na.omit()  %>%  
+  mutate(
+    t = as.numeric(t) , 
+    t1 = lag(t)
+  ) 
+df %<>% na.omit()
+
+```
+
+```{r}
+
+lm(t~t1,df) %>% 
+  summary()
+
+```
+
+從結果可以得知說 0.99 的解釋能力 去解釋具有 t1 對 t 是有影響的 ?
+
+```{r}
+df %>% 
+  with(adf.test(t))
+
+```
+
+???根???定告訴我???
+ Ho: 非定態
+ 
+???果是???有???据???明是定???的
+
+打岔下???????????????
+```{r}
+
+df %<>% 
+  # select(date,t , t) %>%   
+  mutate(date=ymd(date)) %>% 
+  mutate(t = as.numeric(t)) 
+
+df %>% 
+  ggplot(aes(date,t)) +
+  geom_line() + 
+  labs(
+    y = "rate" , 
+    title = "libor plot "
+  )
+```
+
+???料??????
+
+```{r}
+
+df %<>% 
+  mutate(
+      t = as.numeric(t) ,
+      t1 = lag(t) ,
+     rt = log(t) - log(t1) ,
+     rt1 = lag(rt) ,
+     rt2 = lag(rt,2) ,
+     rt3 = lag(rt,3),
+    rt4 = lag(rt,4),
+    rt5 = lag(rt,5),
+    rt6 = lag(rt,6)
+)
+
+df %<>%
+  na.omit()
+
+```
+
+```{r}
+
+df %>% 
+  with(adf.test(rt))
+
+```
+
+如果果是拒絕的? p-value = 0.01 ??
+
+```{r}
+
+lm(rt~rt1 + rt2  ,df)  %>% summary() 
+
+```
+
+最适AR model => rt~ rt1 + rt2
+  
+落後項設為1期, p-value=5.09e-16＜ 0.05, 表示當期會受到基期的影響(t-1)
+落後項設為2期,p-value=0.00412＜ 0.05, 表示當期會受到基期的影響(t-2)
+
+如果果是合理的 因為通常libor 是使用之前的利率做為依据借錢同業
+
+分析是否具有ARCH 效果
+
+```{r}
+
+lm.df <- lm(rt~ rt1 + rt2 ,df) 
+
+rdsquare <- (lm.df$residuals)^2
+
+ff <- bind_cols( 
+  "date" = df$date , "r.square" = rdsquare
+  ) 
+
+
+```
+
+插岔 畫波動圖
+
+```{r}
+ff %>% 
+  head
+
+ff %>% 
+  ggplot(aes(date,r.square)) + 
+  geom_line()
+
+```
+
+得出結果表示具有群聚效果 
+指的是波動大有一段群聚性，波動小也有群聚性
+
+```{r}
+
+ff %<>% 
+  mutate(
+    r1.square = lag(r.square)
+    ) 
+
+ff %<>% 
+  na.omit()
+
+ff %$%
+  lm(r.square ~ r1.square) %>% 
+  summary()
+
+```
+
+有足夠理由証明其是具有 ARCH 效果
+
+求出 AR-GARCH model
+
+```{r}
+
+ff %<>% 
+  bind_cols(tibble("r" = lm.df$residuals)[-1,])
+
+ff %<>% 
+  modify_at(c("r.square","r1.square","r"),
+            function(x){
+              x*100
+              }
+            )
+ff %>% 
+  head
+```
+
+因為在算AR - GARCH 使用的公式是沒有 square 
+
+因此 call 前面的使用r 
+
+```{r}
+
+garch(ff$r , grad = "numerical", trace = FALSE) %>% 
+  summary()
+
+```
+
+最適 AR – GARCH 模型：σ^2t = 8.853e-06 + 5e-02ε^2t-1
+
+今日時間變動程度 σ^2t 受昨日不可預期影響,同時b1，p-value=0.87799 > 0.05不顯著,表示波動只受昨日不可預期影響,沒有波動傳遞性性 
+
