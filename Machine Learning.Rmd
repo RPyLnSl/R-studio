@@ -1,0 +1,160 @@
+---
+title: "Machine Learning"
+author: "Boon Hong"
+date: "December 16, 2018"
+output: html_document
+---
+
+分類和分群使用 ? 
+
+實例 svm 
+
+```{r}
+
+df <- import("01_heights_weights_genders.csv") %>% 
+  as.tibble() %>% 
+  mutate(
+    Gender = as.factor(Gender)
+  )
+test <- sample(nrow(df),nrow(df)*0.1)
+
+df.learning <- df[-test,]
+df.test <- df[test,]
+
+
+system.time(
+  check <- tune.svm(
+    Gender~. , data=df.learning ,
+    gamma = 10^(-3:-1) , cost = 10^(-1:1))
+)
+check 
+  summary()
+
+model.svm <- svm(Gender~.,data=df.learning , gamma = 0.01 , cost = 10)
+
+predict(model.svm , df.test) %>% 
+  table(df.test$Gender) %>% 
+  diag() %>% 
+  sum / nrow(df.test)
+
+```
+0.927
+
+random forest 
+
+```{r}
+
+model.random <- randomForest(Gender~. , data = df.learning , ntree = 150)
+predict(model.random , df.test) %>% 
+  table(df.test$Gender) %>% 
+  diag() %>% 
+  sum / nrow(df.test)
+
+```
+ 0.921
+ 
+ c5.0
+
+```{r}
+
+c <- C5.0Control(
+  minCases = 2 , 
+  sample = 0.9 ,
+  CF = 0.25 
+)
+
+model.c50 <- C5.0(Gender~.,data=df , control = c)
+model.c50 %>% 
+  summary %>% 
+  .$output %>% 
+  str_locate_all("%") %>% 
+  .[[1]] %>% 
+  .[4,1] -> x 
+
+model.c50$output %>% 
+  unlist() %>% 
+  str_sub(x-4) %>% 
+  str_split("%") %>% 
+  .[[1]] %>% 
+  .[1] %>% 
+  as.numeric()/(-100) + 1 
+
+model.c50 %>%  
+  summary()
+
+```
+
+0.935 
+
+```{r}
+
+kmeans(df[,-1],2) %>% 
+  .$cluster -> model.kmeans
+
+kmeans(df[,-1],2) %>% 
+  .$centers -> model.kmeans.means
+
+df.kmeans <- bind_cols(as.tibble(model.kmeans),df)
+
+df.kmeans %<>% 
+  rename(Gender.estimate = value) %>% 
+  mutate(
+    Gender.estimate = if_else(Gender.estimate!=1 ,
+                             "Female","Male") , 
+    Gender.estimate = as_factor(Gender.estimate) , 
+    Gender.error = if_else(Gender!=Gender.estimate,1,0)
+  ) %>% 
+  select(Gender.error,everything())
+
+df.kmeans %>%
+  # filter(Gender.error==1)
+  summarise(
+    sum = sum(Gender.error) ,
+    mean = sum(Gender.error)/(NROW(Gender.error)) ,
+    true.rate = 1-mean
+  )
+
+```
+
+分群效果
+error => 0.9 ?
+true => 0.0935
+
+```{r}
+
+df.kmeans %>% 
+  mutate(
+    Gender.error = as_factor(as.character(Gender.error)),
+    Gender.e = if_else(
+        Gender.error==0,
+        "Estimate True",
+        "Estimate False"
+        )
+      ) %>% 
+  # spread(Gender.error,Gender)
+  ggplot(aes(Height,Weight,color=Gender)) + 
+  geom_point() + 
+  facet_wrap(~Gender.e) + 
+  labs(
+    title = " Error => female and male plot" 
+  )
+
+```
+
+
+先畫核心 表明分群效果 
+
+```{r}
+model.kmeans.means %<>% 
+  as.tibble() 
+df.kmeans %>% 
+  ggplot(aes(Height,Weight))+ 
+  geom_point(aes(color = Gender),alpha = 0.2 )+
+  geom_point(data = model.kmeans.means , size = 2 ,color ="black",shape = 3)
+
+```
+
+因爲有時男生個子比較矮 ，
+所以會誤判為女生 ， 女生反之 .
+
+但有沒有分群效果較好的機器學習呢? 還是說其實社會資料不適合做集群分析呢 ?
