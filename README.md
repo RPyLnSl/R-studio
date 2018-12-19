@@ -11,7 +11,7 @@ R financial
    -  MACD
 - 編寫基本機器學習入門 : 
 - 監督式
-     - random forest ( Random Forest.Rmd ) 
+     - random forest ( Random Forest.Rmd ) , 探討更深入的 random forest (random forsest estimate.Rmd)
      - svm ( svm.Rmd ) 
      - c5.0 替代rpart 單根決策樹 ( rpart.Rmd)
 - 非監督式
