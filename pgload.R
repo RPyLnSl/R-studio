@@ -1,10 +1,10 @@
 # source of function set or packages 
 
-# °ò¥»®M¥ó 
+# �򥻮M�� 
 options(prompt = "$ ")
 
 suppressMessages(
-  require(tidyverse) 
+  library(tidyverse) 
 )
 
 suppressMessages(
@@ -80,15 +80,26 @@ suppressMessages(
       require(car) # linear regression
     )
     suppressMessages(
-      require(e1071) # svm etc some machine learning package 
+      require(e1071)
     )
     suppressMessages(
       require(C50)
     )
-    suppressMessages(
+    suppressPackageStartupMessages(
+      library(party)
+    )
+    suppressPackageStartupMessages(
+      library(rpart.plot)
+    )
+    suppressPackageStartupMessages(
+      library(rpart)
+    )
+    suppressPackageStartupMessages(
+      library(rattle)
+    )
+    suppressPackageStartupMessages(
       require(randomForest)
     )
-    
     print("loading stat package")
   }
   else{
@@ -96,5 +107,4 @@ suppressMessages(
   }
   
 }
-
 
