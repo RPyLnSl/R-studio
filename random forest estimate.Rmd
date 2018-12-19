@@ -1,0 +1,203 @@
+---
+title: "random forest estimate"
+author: "Boon Hong"
+date: "December 19, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+source("pgload.R")
+`load pg`("stat")
+
+```
+
+資料檢視
+
+```{r}
+import("01_heights_weights_genders.csv") %>% 
+  as.tibble() %>% 
+  mutate(Gender = as_factor(Gender)) -> df 
+
+```
+
+資料抽取
+
+```{r}
+
+set.seed(2018)
+test <- sample(nrow(df),nrow(df)*0.1)
+df.test <- df[test,]
+df.learning <- df[-test,]
+
+```
+
+做單根 tree 
+
+```{r}
+
+ctree(Gender~. , data=df.learning) %>% 
+  predict(df.test) %>% 
+  table(df.test$Gender) %>% 
+  diag %>% sum / nrow(df.test)
+
+```
+
+0.905
+
+建立模型
+
+```{r}
+
+model.random <- randomForest(Gender~. ,
+                             data=df.learning,
+                             ntree = 1000 , 
+                             do.trace = 100
+                             )
+
+```
+
+查看模型錯誤 tree 
+
+```{r}
+model.random$err.rate %>% 
+  as.tibble() %>%
+  rename(oob = OOB) %>% 
+  rownames_to_column() %>%
+  rename(index = rowname) %>% 
+  mutate(index = as.numeric(index)) %>% 
+    ggplot(aes(index,oob)) + 
+      geom_line()
+
+```
+
+查看重要變數
+
+```{r}
+
+randomForest::importance(model.random) 
+# or 
+model.random$importance
+
+```
+
+因爲在這邊變數過少 所以都很重要 
+
+```{r}
+
+model.random %>% 
+  predict(df.test) %>% 
+  table(df.test$Gender) %>% 
+  diag %>% sum / nrow(df.test)
+
+```
+ 0.896
+ 
+結論
+random forest 
+rpart => 當訓練資料集內的數目太少，而變數太多時，分類的效果會變差
+所以才會使用 randomforset .
+但是 CIT 結果明顯比 random forest 好
+
+===================================================
+
+學習Random forest 
+https://ithelp.ithome.com.tw/articles/10187561
+```{r}
+library(rpart.plot)
+library(rpart)
+library(rattle)
+```
+
+```{r}
+library(AER)
+data(CreditCard)
+CreditCard %<>% 
+  select(card,reports,age,income,owner,months) %>% 
+  mutate(
+    card = ifelse(card=="yes",1,0) ,
+    card = as.factor(card)
+  ) %>% 
+  as.tibble() 
+```
+
+
+```{r}
+
+set.seed(1117)
+test <- sample(nrow(CreditCard),nrow(CreditCard)*0.3)
+CreditCard.test <- CreditCard[test,]
+CreditCard.learning <- CreditCard[-test,]
+
+CreditCard.learning %>% 
+  nrow()
+CreditCard.test %>% 
+  nrow()
+```
+
+```{r}
+
+rpart(card~. , data=CreditCard.learning , control = rpart.control(cp=0.001)) -> rpart.model
+rpart.model %>%
+  fancyRpartPlot()
+# 
+# rpart(card~. , data=CreditCard.learning) -> rpart.model.1  
+# rpart.model.1 %>% 
+#   fancyRpartPlot()
+
+```
+
+cp 越小 error 越小 
+
+```{r}
+predict( rpart.model , CreditCard.test ,type="class") %>% 
+  table(CreditCard.test$card) %>% 
+  diag() %>% 
+  sum / nrow(CreditCard.test)
+
+nrow(CreditCard.test)
+```
+
+0.8227848
+
+條件推論樹(Conditional Inference Tree)
+```{r}
+library(party)
+ctree(card~ . , data = CreditCard.learning) %>% 
+  predict(CreditCard.test) %>%   
+  table(CreditCard.test$card) %>% 
+  diag() %>% 
+  sum / nrow(CreditCard.test)
+
+```
+
+0.8531646
+
+random forest 
+```{r}
+
+randomForest(card~. , data = CreditCard.learning,do.trace= 100,ntree=1000) -> model.random
+
+plot(model.random)
+
+model.random %>% 
+  predict(CreditCard.test) %>% 
+  table(CreditCard.test$card) %>% 
+  diag %>% sum  / nrow(CreditCard.test)
+
+```
+
+do.trace => 每100 tree 跑一次結果 
+OOB 錯誤率
+
+0.8481013
+
+CIT 反而比 random forset 好 ...
+
+```{r}
+
+model.random %>% 
+  head
+
+```
