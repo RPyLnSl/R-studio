@@ -188,7 +188,7 @@ ff %<>%
               }
             )
 ff %>% 
-  head
+  mutate_at(c(2,3,4),~.x*100)
 ```
 
 因為在算AR - GARCH 使用的公式是沒有 square 
@@ -206,5 +206,58 @@ garch(ff$r , grad = "numerical", trace = FALSE) %>%
 
 今日時間變動程度 σ^2t 受昨日不可預期影響,同時b1，p-value=0.87799 > 0.05不顯著,表示波動只受昨日不可預期影響,沒有波動傳遞性性 
 
-通常 a1 + b1 ~= 1 , 在這裏結果是0.9 ， 所以模型是對的 ， 但是爲什麽乘100 是因爲數值太小 ， 無法呈現 a1 + b1 near to zero .
+通常 a1 + b1 ~= 1 , 在這裏結果是0.9 ， 所以模型是對的 ， 但是爲什麽乘100 是因爲數值太小 ， a1 b1 different near to zero .
+
+做跨國的Var model 
+
+```{r}
+
+df %>% 
+  select(date,t)
+
+df.ted <- import("TEDRATE.csv") %>% 
+  as_tibble() %>%
+  rename(date = DATE , ted = TEDRATE) %>% 
+  mutate(
+    date = ymd(date) , 
+    ted = as.numeric(ted)
+  ) %>% 
+  na.omit()
+
+```
+
+資料清除
+
+```{r}
+
+tf <- left_join(
+  df %>% 
+    select(date,rt) %>% 
+    rename(libor = rt ) ,
+  df.ted %>% 
+    filter(date > "2017-01-01") %>% 
+    # with(adf.test(ted))  # 非定態資料 
+    mutate(
+      rt = log(ted) - log( lag(ted,1) )
+      ) %>% 
+    select(date,rt)
+) %>% 
+  na.omit()
+
+
+```
+
+var model 建立
+
+```{r}
+
+vars::VARselect(tf[,-1],lag.max = 10) 
+# Bayesian information criterion (BIC) or Schwarz criterion (SC)
+    .summary()
+vars::VAR(tf[,-1],p=1) %>% 
+  summary()
+
+```
+
+沒有因果關係 ， 兩個沒有關係 
 
