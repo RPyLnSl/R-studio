@@ -16,7 +16,7 @@ R financial
      - svm [ svm.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/svm.Rmd) 
      - c5.0 替代rpart 單根決策樹 [ rpart.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/rpart.Rmd)
 - 非監督式
-     - kmeans [ kmeans.Rmd ]()
+     - kmeans [ kmeans.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/k%20means.Rmd)
 - What ?
      - 綜合運用機器學習 - 分群 分類 [ Machine Learning.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/Machine%20Learning.Rmd)
 - Other ?
