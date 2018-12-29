@@ -12,7 +12,7 @@ R financial
 - 編寫基本機器學習入門 : 
 - 監督式
      - random forest [ Random Forest.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/Random%20Forest.Rmd)
-     探討更深入的 random forest [random forsest estimate.Rmd](https://github.com/RPyLnSl/R-studio/blob/master/random%20forest%20estimate.Rmd)
+     - 探討更深入的 random forest [random forsest estimate.Rmd](https://github.com/RPyLnSl/R-studio/blob/master/random%20forest%20estimate.Rmd)
      - svm [ svm.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/svm.Rmd) 
      - c5.0 替代rpart 單根決策樹 [ rpart.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/rpart.Rmd)
 - 非監督式
