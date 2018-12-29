@@ -5,7 +5,7 @@ R financial
    - 利用機器學習以及金融相关知识完成金融建模并且编写策略 
 
 - 編寫市場金融策略 : 
-   -  黃昏之星 ( R financial.Rmd )
+   -  黃昏之星 [www.google.com]( R financial.Rmd )
    -  SMA ( Sma Analysis.Rmd )
    -  RSI
    -  MACD
