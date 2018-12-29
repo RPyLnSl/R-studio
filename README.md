@@ -5,19 +5,20 @@ R financial
    - 利用機器學習以及金融相关知识完成金融建模并且编写策略 
 
 - 編寫市場金融策略 : 
-   -  黃昏之星 [www.google.com]( R financial.Rmd )
-   -  SMA ( Sma Analysis.Rmd )
+   -  黃昏之星 [R financial.Rmd](https://github.com/RPyLnSl/R-studio/blob/master/R%20financial.Rmd)
+   -  SMA [ Sma Analysis.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/Sma%20analysis.Rmd)
    -  RSI
    -  MACD
 - 編寫基本機器學習入門 : 
 - 監督式
-     - random forest ( Random Forest.Rmd ) , 探討更深入的 random forest (random forsest estimate.Rmd)
-     - svm ( svm.Rmd ) 
-     - c5.0 替代rpart 單根決策樹 ( rpart.Rmd)
+     - random forest [ Random Forest.Rmd ]()
+     探討更深入的 random forest [random forsest estimate.Rmd](https://github.com/RPyLnSl/R-studio/blob/master/random%20forest%20estimate.Rmd)
+     - svm [ svm.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/svm.Rmd) 
+     - c5.0 替代rpart 單根決策樹 [ rpart.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/rpart.Rmd)
 - 非監督式
-     - kmeans ( kmeans.Rmd )
+     - kmeans [ kmeans.Rmd ]
 - What ?
-     - 綜合運用機器學習 - 分群 分類 ( Machine Learning.Rmd )
+     - 綜合運用機器學習 - 分群 分類 [ Machine Learning.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/Machine%20Learning.Rmd)
 - Other ?
-   - 多重綫性回歸 ( Regression Tree.Rmd ) 中介效果,調節效果
-   - 时间序列分析 ( TimeSeries.Rmd )
+   - 多重綫性回歸 [ Regression Tree.Rmd ] 中介效果,調節效果
+   - 时间序列分析 [ TimeSeries.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/TimeSeries.Rmd)
