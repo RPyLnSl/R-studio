@@ -210,7 +210,14 @@ import("01_heights_weights_genders.csv") %>%
   mutate(
     Gender = as.factor(Gender)
   ) -> df
-i <- 1000
+
+i <- 100
+
+```
+
+測試100 次
+
+```{r}
 
 x <- replicate(i,expr = {
    test <- sample(nrow(df),nrow(df)*0.1,replace = F)
@@ -223,10 +230,18 @@ x <- replicate(i,expr = {
      sum /nrow(df.test)
   }
           )
+
 cat("random forest ",i," estimate equal to " , x %>% 
   mean
   )
+
+
+```
+
+```{r}
+
 c <- ctree_control(minsplit = 2)
+
 y <- replicate(i,expr = {
   test <- sample(nrow(df),nrow(df)*0.1,replace = F)
   df.test <- df[test,]
@@ -241,6 +256,10 @@ y <- replicate(i,expr = {
 cat("ctree ",i," estimate equal to",y %>% 
       mean)
 
+
+```
+
+```{r}
 r <- rpart.control(cp = 0.001)
 
 z <- replicate(i,expr = {
@@ -261,3 +280,4 @@ cat("rpart ",i," estimate equal to",z %>%
 
 ```
 
+結論 : 單根還是比多根好 ， 覺得這是一個很不錯的結論 ， 代表 random forest 沒有需要建立 ， 因爲單根多根兩個相差不多， 同時前者比後者好 。
