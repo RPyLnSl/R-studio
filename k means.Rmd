@@ -1,0 +1,57 @@
+---
+title: "k-means"
+author: "Boon Hong"
+date: "December 15, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+rm(list=ls())
+source("pgload.R")
+`load pg`("stat")
+data(iris)
+
+```
+
+```{r}
+iris %>% 
+  as_tibble() %>% 
+  .$Species %>% 
+  tail
+
+model <- kmeans(iris[,-5] , 3) 
+table(model$cluster,iris$Species)
+
+model$cluster %>% 
+  length
+iris$Sepal.Length %>% 
+  length()
+
+model$centers[,c(1,2)] %>% 
+  as.tibble() -> model.centers
+
+bind_cols(
+  as.tibble(iris) , as.tibble(model$cluster)
+) -> model.iris.kmeans
+
+model.iris.kmeans %>% 
+  rename(group = value) %>% 
+  # gather(Sepal.Length:Petal.Width ,key="type",value = "dol") %>% 
+  ggplot(aes(Sepal.Length,Sepal.Width,color=Petal.Length)) + 
+    geom_point() + 
+    geom_point(data = model.centers,
+               color = "red",size = 3,shape=3) 
+
+```
+
+如果不看添加的 color = Petal.Length 純粹是二維空間 
+
+效果好嗎? 
+
+
+```{r}
+
+```
+
