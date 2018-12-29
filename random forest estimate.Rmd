@@ -95,7 +95,7 @@ model.random %>%
  0.896
  
 結論
-random forest 
+random forest ;  
 rpart => 當訓練資料集內的數目太少，而變數太多時，分類的效果會變差
 所以才會使用 randomforset .
 但是 CIT 結果明顯比 random forest 好
@@ -201,3 +201,63 @@ model.random %>%
   head
 
 ```
+
+bootstrap 實作 
+
+```{r}
+import("01_heights_weights_genders.csv") %>% 
+  as.tibble() %>% 
+  mutate(
+    Gender = as.factor(Gender)
+  ) -> df
+i <- 1000
+
+x <- replicate(i,expr = {
+   test <- sample(nrow(df),nrow(df)*0.1,replace = F)
+   df.test <- df[test,]
+   df.learning <- df[-test,]
+   model.random <- randomForest::randomForest(Gender~.,df.learning)
+   predict(model.random,df.test) %>% 
+     table(df.test$Gender) %>% 
+     diag() %>% 
+     sum /nrow(df.test)
+  }
+          )
+cat("random forest ",i," estimate equal to " , x %>% 
+  mean
+  )
+c <- ctree_control(minsplit = 2)
+y <- replicate(i,expr = {
+  test <- sample(nrow(df),nrow(df)*0.1,replace = F)
+  df.test <- df[test,]
+  df.learning <- df[-test,]
+  model.ctree <- ctree(Gender~.,df.learning,controls = c)
+  predict(model.ctree,df.test) %>% 
+    table(df.test$Gender) %>% 
+    diag %>% 
+    sum / nrow(df.test)
+})
+
+cat("ctree ",i," estimate equal to",y %>% 
+      mean)
+
+r <- rpart.control(cp = 0.001)
+
+z <- replicate(i,expr = {
+  
+  test <- sample(nrow(df),nrow(df)*0.1,replace = F)
+  df.test <- df[test,]
+  df.learning <- df[-test,]
+
+  model.rpart <- rpart(Gender~. ,df.learning,control = r)  
+  predict(model.rpart,df.test,type = "class") %>% # type 分類問題 
+    table(df.test$Gender) %>% 
+    diag %>% 
+    sum / nrow(df.test)
+})
+
+cat("rpart ",i," estimate equal to",z %>% 
+      mean)
+
+```
+
