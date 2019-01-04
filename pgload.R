@@ -1,6 +1,6 @@
 # source of function set or packages 
 
-# �򥻮M�� 
+# °ò¥»®M¥ó => basic package 
 options(prompt = "$ ")
 
 suppressMessages(
@@ -23,6 +23,15 @@ suppressMessages(
     )
     suppressMessages(
       require(lubridate)
+    )
+    suppressMessages(
+      require(tseries)
+    )
+    cat(
+      "\n # time series # \n\n" ,
+      "johansen => ", "urca\n" ,  
+      "var models => ","vars \n" ,
+      "engle and granger => ", "egcm\n\n"
     )
     print("loading financial package")
   }  
