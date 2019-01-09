@@ -22,4 +22,4 @@ R financial
 - Other ?
    - 多重綫性回歸 [ Regression Tree.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/Regression%20Tree.Rmd) 中介效果,調節效果
    - 时间序列分析 [ TimeSeries.Rmd ](https://github.com/RPyLnSl/R-studio/blob/master/TimeSeries.Rmd)
-   - 基本shiny 應用 [shiny.R]()
+   - 基本shiny 應用 [shiny.R](https://github.com/RPyLnSl/R-studio/blob/master/shiny.R)
