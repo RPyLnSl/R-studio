@@ -1,0 +1,137 @@
+---
+title: "gghighlines"
+author: "Boon Hong"
+date: "January 17, 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+source("pgload.R")
+# install.packages("gghighlight")
+# devtools::install_github("yutannihilation/gghighlight")
+```
+
+
+```{r}
+
+set.seed(2)
+d <- purrr::map_dfr(
+  letters,
+  ~ data.frame(
+      idx = 1:400,
+      value = cumsum(runif(400, -1, 1)),
+      type = .,
+      flag = sample(c(TRUE, FALSE), size = 400, replace = TRUE),
+      stringsAsFactors = FALSE
+    )
+)
+
+```
+
+```{r}
+
+set.seed(2)
+df <- purrr::map_dfr(letters ,
+                     ~ data.frame(idx = 1:400 ,
+                    value = cumsum(runif(400,-1,1)),
+                    type=. , 
+                    flag = sample(c(TRUE,FALSE),
+                                  size = 400, replace = T
+                                  ),
+                    stringsAsFactors = F
+                    )
+               )
+
+df %>% 
+  group_by(type) %>% 
+  filter(max(value)>32) %>% 
+  as.tibble() %>% 
+  ungroup() %>% 
+  summarise(max(value))
+```
+
+```{r}
+
+ggplot(df) + 
+  geom_line(aes(idx,value,color = type)) + 
+  theme_minimal()+
+  gghighlight::gghighlight(max(value)>15 , mean(flag) > 0.5 ) + 
+  facet_wrap(~type)
+
+```
+
+群組裏 max(value) > 15 以及 mean(flag) > 0.55
+
+```{r}
+
+ggplot(iris, aes(Sepal.Length, fill = Species)) +
+  geom_histogram()  + 
+  facet_wrap(~Species)+
+  gghighlight::gghighlight()
+
+```
+
+從資料中取出隨機取20個
+
+```{r}
+
+dplyr::sample_n(d, 20) -> p 
+p %>% 
+  # group_by(type) %>%
+  # summarise(max(value))
+  ggplot(aes(idx,value)) + 
+    geom_point(size = 2) +
+    gghighlight::gghighlight( value  ,
+                              max_highlight = 5 ,
+                              label_key = value ,
+                              use_direct_label = F
+                              ) -> t 
+
+```
+使用 max(value) 代表你讀太久了 
+
+max_highlight 代表只要取五個
+label_key 代表 使用 value 去顯示點的數據
+use_direct_label = F 不顯示點的數據 
+
+```{r}
+
+t +
+  geom_label(aes(label = type),hjust = 1 ,
+             vjust = 1 , fill = "purple" , 
+             color = "white" , alpha = 0.5) 
+
+t$data
+
+```
+
+```{r}
+
+ 
+tibble(
+  type = sample(
+    c(letters[1:7]),replace = T,size = 100),
+  value = runif(100)
+  ) -> x 
+
+head(x)
+
+x %>% 
+  # draw  
+  ggplot(aes(type,value)) + 
+    geom_point(aes(alpha = value)) + 
+    theme_minimal() +
+    gghighlight::gghighlight(
+      value  ,
+      unhighlighted_colour = "pink" ,
+      label_key = type , 
+      max_highlight = 5L
+      )
+
+```
+
+記得放5L 他會幫我們加line , 因爲資料形態的問題 
+
+
