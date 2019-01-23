@@ -1,0 +1,395 @@
+---
+title: "Reproducible Finance with R"
+author: "Boon Hong"
+date: "January 18, 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+
+source("pgload.R")
+`load pg`("fin")
+# show(show = T)
+
+```
+
+```{r}
+
+fc.monthly_stock_returns <- function(ticker,start_year){
+  symbols <- getSymbols(ticker,auto.assign = F,warnings = F)
+  data <- periodReturn(symbols ,
+                       period = "monthly" ,
+                       subset = paste(start_year,
+                                      "::",sep="") ,
+                       type = "log"
+                       )
+  colnames(data) <- as.character(ticker) 
+  
+  assign(ticker , data , .GlobalEnv)
+
+}
+
+```
+
+assign(環境名字,資料,環境)
+
+symbols data 
+
+```{r}
+
+fc.monthly_stock_returns("AMZN",2010)
+fc.monthly_stock_returns("JPM",2010)
+fc.monthly_stock_returns("GOOG",2010)
+
+```
+
+tibble no suppose xts , so use default 
+```{r}
+
+df.xts <- merge.xts(AMZN,GOOG,JPM) 
+
+```
+
+```{r}
+
+df.xts %>% 
+  dygraph(main = "Google v JP Morgan v Amazon") %>% 
+  dyAxis("y",label = "%") %>% 
+  dyOptions(colors = RColorBrewer::brewer.pal(3,"Set2"))
+
+```
+
+投資組合重量
+
+```{r}
+
+w <- c(.25,.25,.50)
+
+df.m.return <- Return.portfolio(df.xts,weights = w)
+
+df.xts %>% 
+  head
+
+df.m.return %>% 
+  head
+```
+
+return.portfolio 計算投資組合重量 
+
+```{r}
+
+df.m.return %>% 
+  dygraph(main="Portfolio Monthly Return") %>% 
+  dyAxis("y",label = "%")
+
+```
+
+月囘報 
+
+所以的報酬指的是漲跌幅度 ，明天比今天高 表示(明天-今天)/今天 代表報酬
+
+投资组合中投资1美元的增长
+
+```{r}
+
+df.m.return.growth <- Return.portfolio(df.xts,weights = w , wealth.index = T)
+
+df.m.return.growth %>% 
+  dygraph(main = "Growth of $1 Invested in Portfolio") %>% 
+  dyAxis("y",label = "$")
+
+```
+
+calculate sharpe ratio
+
+```{r}
+
+df.sharpe.ratio <- Return.excess(df.m.return,Rf =0.003)  
+mean(df.sharpe.ratio)/StdDev(df.sharpe.ratio)
+
+df.m.sharpe.ratio <- SharpeRatio(df.m.return,Rf = 0.003)
+
+```
+
+Sector Correlations
+
+```{r}
+
+ticker <- c("XLY", "XLP", "XLE",    "XLF", "XLV",   
+            "XLI", "XLB", "XLK", "XLU", "SPY")  
+
+sector <- c("Consumer Discretionary", "Consumer Staples", 
+            "Energy", "Financials", "Health Care", "Industrials", 
+            "Materials", "Information Technology", "Utilities", "Index")
+
+etf_ticker_sector <- tibble(ticker, sector)
+
+etf_ticker_sector %>% 
+  head
+
+```
+
+data improt : (www.sectorspdr.com/sectorspdr/)
+
+```{r}
+etf_weekly_returns <- function(ticker) {
+    
+  symbols <- getSymbols(ticker, auto.assign = T, warnings = FALSE)
+      
+  etf_prices <- do.call(
+      merge , lapply(
+        symbols,function(x)Cl(get(x))
+        ) 
+      ) 
+      
+  etf_returns <- do.call(merge, lapply(etf_prices, 
+                                       function(x) periodReturn(x, period = 'weekly', type = 'log')))
+  
+  colnames(etf_returns) <- etf_ticker_sector$sector
+      
+  etf_returns
+
+}
+```
+
+```{r}
+
+etf_returns <- etf_weekly_returns(etf_ticker_sector$ticker)
+
+```
+
+```{r}
+
+sector_index_correlation <- function(x, window) {
+  
+    merged_xts <- merge(x, etf_returns$'Index')
+
+    merged_xts$rolling_test <- rollapply(merged_xts, window, 
+                                         function(x) cor(x[,1], x[,2], use = "pairwise.complete.obs"), 
+                                         by.column = FALSE)
+    
+    names(merged_xts) <- c("Sector Returns", "SPY Returns", "Sector/SPY Correlation")
+    
+    merged_xts
+}
+
+```
+
+```{r}
+
+```
+
+window = 20 為一個月 ， 假如為天的話
+```{r}
+
+IT_SPY_correlation <- sector_index_correlation(etf_returns$'Information Technology', 20)  
+
+dygraph(IT_SPY_correlation$`Sector/SPY Correlation`,main = "Correlation between SP500 and Tech ETF") %>% 
+   dyAxis("y", label = "Correlation") %>%
+   dyRangeSelector(height = 20) %>% 
+   dyShading(from = "2007-12-01",to = "2009-06-01",color = "#FFE6E6")  %>% 
+   dyEvent(x = "2008-09-15" , label = "Fin Crisis" , labelLoc = "top",color = "red") %>% 
+  dyEvent(x="2017-12-29",label = "down",labelLoc = "top",color = "blue")
+
+```
+
+dyRangeSelector 圖表下方那個結果
+dysharing 範圍顔色
+
+Roc curve
+
+当截止线进一步向右移动时，给决策者更好的机会做出正确的决定，相应的点向下移动ROC曲线向更低的命中率。这说明了潜在决策问题中命中率和误报率之间的基本交易关系。对于任何给定的问题，决策算法或分类器将存在于虚警/命中率空间中的某些ROC曲线上。提高命中率通常以增加更多错误警报的可能性为代价。
+
+```{r}
+source("pgload.R")
+`load pg`("fin")
+symbols <- c("2330.tw","2882.tw")
+getSymbols(symbols, src = 'yahoo', from = "2013-01-01", 
+             auto.assign = TRUE, warnings = FALSE) %>%  
+  map(~Cl(get(.))) %>% 
+  reduce(merge) %>% 
+  `colnames<-`(symbols)
+
+getSymbols(symbols , auto.assign = T , warnings = F , from = "2013-01-01") %>% 
+  # map(~ Cl(get(.))) 
+  map(function(x){
+    x %>% 
+    get() %>% 
+    Cl() %>% 
+    periodReturn(period = "weekly",type = "log") %>%
+    na.omit
+  }) %>% 
+  reduce(merge) -> test 
+  
+
+```
+
+```{r}
+df.cor.xts <- merge.xts(
+  test ,
+  cor = test %>% 
+  rollapply(20,function(x) cor(x[,1], x[,2]) , by.column=F)
+)
+
+df.cor.xts %<>% 
+  `colnames<-`(c("2330.tw","2882.tw","cor")) 
+  
+
+```
+
+```{r}
+df.cor.xts[,3] %>% 
+  dygraph() %>% 
+  dyShading(from = "2014-06-04",to = "2014-12-12",color = "grey3",axis = "x") %>% 
+  dyEvent("2014-08-08",label = "down",labelLoc ="top" ,color = "#6e3d96")
+
+```
+
+calcuate skewness 
+
+import data
+```{r}
+
+symbols <- c("SPY","EFA", "IJS", "EEM","AGG")
+prices <-
+    getSymbols(symbols,
+               auto.assign = T,
+               warnings = F,from="2005-01-01") %>% 
+    map(function(x){
+      get(x) %>% 
+        Ad() 
+    }) %>% 
+    reduce(merge) %>% 
+    `colnames<-`(symbols)  
+      
+prices <- 
+  getSymbols(symbols, src = 'yahoo', from = "2005-01-01", 
+             auto.assign = TRUE, warnings = FALSE) %>% 
+  map(~Ad(get(.))) %>% 
+  reduce(merge) %>%
+  `colnames<-`(symbols)
+
+prices
+```
+
+```{r}
+
+library(tidyquant)
+library(timetk)
+prices %>% 
+  to.monthly(indexAt = "last",OHLC=F) %>% 
+   tk_tbl(preserve_index = TRUE , rename_index = "date") %>% 
+    gather(asset, returns, -date) %>% 
+    group_by(asset) %>%  
+    mutate(returns = (log(returns) - log(lag(returns)))) -> asset_return_long
+
+```
+indexAt 數字 
+OHLC 要改變的是個別
+preserve_index == TRUE 把index 取出來 
+rename_index 取出來的name 為 
+
+
+SPY (S&P500 fund) weighted 25%
++ EFA (a non-US equities fund) weighted 25%
++ IJS (a small-cap value fund) weighted 20%
++ EEM (an emerging-mkts fund) weighted 20%
++ AGG (a bond fund) weighted 10%
+
+```{r}
+
+asset_return_long %>% 
+  head
+w <- c(0.25, 0.25, 0.20, 0.20, 0.10)
+
+asset_weights_sanity_check <- tibble(w, symbols)
+
+asset_weights_sanity_check
+
+```
+
+```{r}
+df.xts.yearly <- 
+asset_return_long %>% tq_portfolio(
+  assets_col = asset , 
+  returns_col = returns ,
+  weigth = w ,
+  col_rename = "returns" ,
+  rebalance_on = "years"
+)
+
+df.xts.months <- 
+asset_return_long %>%
+  tq_portfolio(
+         assets_col  = asset, 
+         returns_col = returns,
+         weights     = w,
+         col_rename  = "returns",
+         rebalance_on = "months"
+         ) 
+
+```
+
+```{r}
+
+skewness(df.xts.months$returns)
+
+```
+
+最终的数字可能会忽略重要信息，我们将抵制停在那里的诱惑。例如，一个非常大的负月回报导致轻微的负偏差吗？如果是这样，发生了什么？或者它是由几个中等负面回报引起的？是什么造成的？他们是连续的吗？它们是季节性的吗 我们需要进一步调查。
+
+```{r}
+library(scales)
+df.xts.months %>% 
+  tq_mutate(
+    select = returns ,
+    mutate_fun = rollapply , 
+    width = 6 ,
+    FUN = skewness , 
+    col_rename = "skew"
+  ) %>% 
+ # head(10)
+  ggplot(aes(date,skew)) + 
+    geom_line(color = "cornflowerblue",size=1.25) + 
+    geom_abline(aes(intercept=0,slope=0),color= "#212c3d") 
+    # scale_y_continuous(limits = c(-3, 3), breaks = pretty_breaks(n = 8)) + 
+  # scale_x_date(breaks = pretty_breaks(8))
+# plotly::ggplotly(p)
+
+```
+
+留在 xts 世界
+
+```{r}
+search()
+
+prices %>%
+  to.monthly(indexAt = "last",OHLC =F ) %>% 
+  Return.calculate(method = "log") %>%  
+  na.omit() -> asset_returns_xts
+  
+asset_returns_xts %>% 
+   Return.portfolio(weights = w , rebalance_on = "months") %>%  
+  `colnames<-`("returns") -> prices.monthly
+w %>% 
+  head
+
+prices.monthly %>%
+  head
+  dygraph()
+
+prices.monthly %>%
+  rollapply(6 ,skewness,by.column = FALSE ) %>% 
+  # mean(na.rm = T)
+  # head(10)
+  dygraph() 
+
+```
+
+滚动图表非常有启发性，表明六个月的间隔偏差在该投资组合的大约一半的时间内是正的。今天，整体偏度是负面的，但2016年中期的滚动偏度为正，大于1.从2016年底开始大幅下挫，2017年3月最低读数为-1.65，极有可能造成当市场担心美国大选时，会产生一两个非常大的负回报。我们可以看到，随着2017年的滚动偏度变得更加积极，这些担忧开始减轻。
+
+(https://rviews.rstudio.com/2017/12/13/introduction-to-skewness/)
+
+
