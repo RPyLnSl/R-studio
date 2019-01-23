@@ -13,7 +13,7 @@ R financial
    - gghighlines [gghighlines.Rmd](https://github.com/RPyLnSl/R-studio/blob/master/gghighlines.Rmd)
 
 - Reproducible Finance with R
-   - sharpo ratio and then correlations (https://github.com/RPyLnSl/R-studio/blob/master/Reproducible%20Finance%20with%20R.Rmd) 
+   - sharpo ratio and then correlations[1](https://github.com/RPyLnSl/R-studio/blob/master/Reproducible%20Finance%20with%20R.Rmd) 
    
 - 編寫市場金融策略 : 
    -  黃昏之星 [R financial.Rmd](https://github.com/RPyLnSl/R-studio/blob/master/R%20financial.Rmd)
