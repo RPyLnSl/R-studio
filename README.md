@@ -11,6 +11,7 @@ R financial
    - 基本shiny 應用 [shiny.R](https://github.com/RPyLnSl/R-studio/blob/master/shiny.R)
 - 優化程式碼 => 可以一步就不要兩步
    - gghighlines [gghighlines.Rmd](https://github.com/RPyLnSl/R-studio/blob/master/gghighlines.Rmd)
+   - 有效處理時間序列資料 padr [padr.Rmd]()
 
 - Reproducible Finance with R
    - sharpo ratio and then correlations[1](https://github.com/RPyLnSl/R-studio/blob/master/Reproducible%20Finance%20with%20R.Rmd) 
