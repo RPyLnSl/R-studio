@@ -1,0 +1,40 @@
+---
+title: "padr"
+author: "Boon Hong"
+date: "January 31, 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+簡介 
+
+padr 是屬於一種處理時間系列的套件
+```{r setup}
+# install.packages("padr")
+source("pgload.R")
+`load pg`("fin")
+library(padr)
+
+```
+
+
+```{r}
+( df.pf <- 
+padr::coffee
+)
+```
+
+```{r}
+df.pf %>% 
+  thicken("day") %>% 
+  group_by(time_stamp_day) %>% 
+  summarise(sum(amount)) %>% 
+  pad() %>% 
+  fill_by_value()
+
+padr::emergency %>% 
+  head
+
+```
+
