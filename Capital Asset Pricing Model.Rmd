@@ -1,0 +1,86 @@
+---
+title: "Capital Asset Pricing Model"
+author: "Boon Hong"
+date: "January 31, 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+source("pgload.R")
+`load pg`("fin")
+
+```
+
+```{r}
+
+symbols <- c("SPY","EFA", "IJS", "EEM","AGG")
+(df.xts <- getSymbols(symbols , auto.assign = T ,
+           from = "2013-01-01" , to = "2017-12-31" , warnings = F) %>%
+  map(function(x){
+    get(x) %>% 
+      Cl()
+  }) %>% 
+  reduce(merge) 
+)
+
+(df.xts %<>% 
+  `colnames<-`(symbols)
+)
+```
+
+```{r}
+w <- c(0.25, 0.25, 0.20, 0.20, 0.10)
+df.xts %>% 
+  to.monthly(indexAt = "monthly",OHLC = F ) %>% 
+  Return.calculate(method = "log") %>% 
+  na.omit() %>%
+  Return.portfolio(weights = w,rebalance_on = "months") -> df.portfolio
+# prove => 0.01267817*0.25-0.01296945*0.25+
+# 0.016175358*0.2-0.02310527*0.2+0.003977973*0.1
+  
+```
+
+```{r}
+df.xts %>%
+  to.monthly(indexAt = "monthly",OHLC =F ) %>% 
+  Return.calculate(method = "log") %>% 
+  tk_tbl(preserve_index = T,rename_index = "date") %>% 
+  na.omit() -> df.matket.returns 
+
+df.portfolio %>% 
+  tk_tbl(preserve_index = T,rename_index = "date") %>%
+  mutate(matket_return = df.matket.returns$SPY
+         # x = df.matket.returns$AGG ,
+         # y = df.matket.returns$EFA
+         ) 
+  # summarise(
+  #   cor = cor(portfolio.returns,matket_return) ,
+  #   x = cor(portfolio.returns,x) ,
+  #   y = cor(portfolio.returns,y)
+  # )
+  # transfor to xts type and draw 
+  # tk_xts(date_var = date) %>%
+  # dygraphs::dygraph()
+
+df.matket.returns %>% 
+  gather(SPY:AGG , key = "asset" , value = "return") %>% 
+  nest(-asset) %>%   # unless asset equal to don't nest asset
+  mutate(model = map(data,~lm(return ~ df.matket.returns$SPY , data=.))) %>% 
+  unnest(model %>% map(tidy)) %>% 
+  filter(term == "df.matket.returns$SPY" ) %>% 
+  select(-term) -> x
+library(magrittr)
+
+x$estimate[1]*0.25+x$estimate[2]*0.25+x$estimate[3]*0.2+x$estimate[4]*0.2+x$estimate[5]*0.1
+
+```
+
+Visualizing the Capital Asset Pricing Model
+
+```{r}
+
+
+```
+

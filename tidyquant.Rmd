@@ -1,0 +1,266 @@
+---
+title: "tidyquant"
+author: "Boon Hong"
+date: "February 3, 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+tidyquant 是 xts 其他定量財務資料分析 與 tidyverse 做結合
+xts 裏面函數 通過 tidyquant 套件輕鬆與 tibble 做協同的合作
+
+```{r setup}
+source("pgload.R")
+`load pg`("fin")
+# `load pg`("stat")
+`load pg`("text")
+```
+
+```{r}
+
+tidyquant::tq_get("2330.tw",get = "stock.prices") %>% 
+  head
+
+`2330.tw` <- getSymbols("2330.tw",from="2009-01-01")
+`2330.TW` %>% 
+  # to.monthly(indexAt = "last",OHLC=F) %>% 
+  tk_tbl(preserve_index = T,rename_index = "date") %>% 
+  `colnames<-`(c("date","open","high","low","close","volume","adjusted")) %>% 
+  na.omit() %>% 
+  tq_mutate_xy(x=close,mutate_fun = SMA , n=15) %>% 
+  rename(sma.15 = SMA) %>% 
+  tq_mutate_xy(x=close ,mutate_fun = SMA , n = 50 , col_rename = "sma.50") %>% 
+  # tk_xts(date_var = date) %>%
+  select(date,close,sma.15,sma.50) %>% 
+  tq_transmute(mutate_fun = to.period , period = "months") %>% 
+  gather(-date,key="price",value = "return") %>% 
+  filter(date >= "2018-01-01") %>% 
+  ggplot(aes(date,return,col= price)) +
+    geom_line() + 
+    theme(legend.position = "bottom") + 
+    scale_color_manual(values = c("black","green","red"))
+  # chart_Series()
+
+```
+
+ohlc fun >> cl 使用cl 做爲sma 分析
+mutate fun >> 使用的函數 ?
+
+```{r}
+
+c("2330.tw","IJS","AGG","2882.tw") %>%  
+  getSymbols(auto.assign = T) %>% 
+  map(function(x){
+    get(x) %>% 
+      Cl()
+  }) %>% 
+  reduce(merge) %>% 
+  na.omit()
+
+df <- 
+  c("2330.tw","IJS","AGG","EEM") %>% 
+    tq_get(from="2018-01-01") 
+
+df %>% 
+  group_by(symbol) %>% 
+  tq_transmute(select = adjusted ,mutate_fun = periodReturn,period= "daily",col_rename = "return") %>% 
+  tq_transmute(return,Return.clean,alpha=0.05) %>%  # return clean outlier 0.05 
+  tq_transmute(return,Return.excess,Rf=0.03/255,col_rename = "returns") %>% 
+  ggplot(aes(date)) + 
+    geom_col(aes(y=returns)) + 
+    geom_hline(yintercept = 0.03,linetype=2) + 
+    geom_hline(yintercept = -0.03,linetype=2,color=palette_dark()[1]) + 
+    theme_light()
+
+```
+
+```{r}
+tq_transmute_fun_options()
+
+df <- 
+  tibble(symbols = c("2330.tw","2882.tw","AGG","IJS")) %>% 
+    mutate(stock.prices = map(.x = symbols , ~tq_get(.x))) 
+df %>% 
+  group_by(symbols) %>% 
+    unnest(stock.prices) %>% 
+    tq_transmute(
+      select = close ,
+      mutate_fun = periodReturn,
+      period = "yearly",
+      col_rename = "returns"
+    ) %>% 
+  ungroup() %>%
+  ggplot(aes(x=year(date), fill=symbols)) + 
+    geom_bar(aes(y=returns),stat="identity",position = "dodge") +
+    scale_color_manual(values = c("red","#6c7c96","yellow","green"))+
+    # scale_x_continuous(trans = "identity") +
+    scale_y_continuous(labels = scales::percent) +  
+    theme(legend.position = "bottom") + 
+    theme_minimal() 
+
+    
+```
+
+```{r}
+df %>% 
+  group_by(symbols) %>% 
+    unnest(stock.prices) %>% 
+    tq_transmute(
+      select = close ,
+      mutate_fun = periodReturn,
+      period = "yearly",
+      col_rename = "returns"
+    ) %>% 
+  ungroup() %>%
+  mutate(
+    l = ifelse(
+      sign(returns) == 1 , "red" , "blue"
+      )
+  ) -> test
+  
+  ggplot(aes(year(date),fill=l)) +
+    geom_col(aes(y=returns)) + 
+    facet_wrap(~symbols,scales = "free_y") + 
+    theme(legend.position = "none") 
+    
+
+```
+
+```{r}
+test %>% 
+  select(-l) %>% 
+  nest(-symbols) %>% 
+  mutate(
+    ml = map(data , ~lm(returns ~ year(date),
+           data= .x )) ,
+    ml = map(ml,~tidy(.x))
+  ) %>%
+  unnest(ml) %>% 
+  filter(term=="year(date)")
+
+```
+
+得到結果表示 每上升一年 ， 報酬下降 ，往下研究波動性 ，期望值 
+但是樣本不足 15 以上 
+
+```{r}
+test %>%
+  select(-l) %>% 
+  # mutate(
+  #   date = format(date,"%Y-%m")
+  # ) %>%
+  # spread(symbols,returns) %>% 
+  # filter(date < "2019-01") %>%
+  # gather(key = "stock",value = "return",`2330.tw`:IJS) %>% 
+  # head
+  ggplot(aes(date,returns,color=symbols)) +
+    geom_line() + 
+    facet_wrap(~symbols)
+
+c("2330.tw","2882.tw","AGG","IJS") %>% 
+  getSymbols(auto.assign = T) %>% 
+  map(function(x){
+    get(x) %>% 
+      cl
+  }) %>% 
+  head
+
+```
+
+從上述結果得知 波動大 ， 同時最後的趨勢是跌的 ， 通常Estimate 為負值 ...
+
+```{r}
+
+df.con <- bind_cols(
+  df %>% 
+    unnest(stock.prices) %>% 
+    na.omit ,
+  df %>%
+    unnest(stock.prices) %>%
+    group_by(symbols) %>%
+    tq_transmute(
+      select = close ,
+      mutate_fun = periodReturn ,
+      period = "daily"
+    ) 
+)
+```
+
+```{r}
+
+df.con %>% 
+  select(symbols , date ,close , daily.returns) %>% 
+
+  nest(-symbols) %>% 
+  group_by(symbols) %>%
+  mutate(model = map(
+    .x = data ,~tidy(lm(daily.returns~date,data = .x))
+    )) %>% 
+  unnest(model) %>% 
+  filter(term == "date")
+
+```
+
+```{r}
+df.con %>% 
+  select(symbols , date ,close , daily.returns) %>% 
+  group_by(symbols) %>% 
+  summarise(
+    mean(daily.returns) ,
+    sd(daily.returns)
+  )
+  ggplot(aes(date)) +
+    # geom_line(aes(y=close,color=symbols)) +
+    geom_line(aes(y=daily.returns,color=symbols)) +
+    facet_wrap(~symbols,scales = "free_y") 
+
+multiplot(p,p11,ncol=4)
+```
+
+之前的結果不能做準確 ， 因爲資料不夠大 ， 雖然波動結果沒變 ，但是好奇的是否有用 ... 
+
+###
+
+抛棄這些想法 ， 開始實踐 tidyquant 使用方法
+
+```{r}
+
+search()
+rm(list=ls())
+
+```
+
+```{r}
+df <- bind_cols(
+  tq_get("2330.tw",get = "stock.prices", from = "2010-01-01")
+  # tq_get("2330.tw",get = "dividends", from = "2010-01-01")
+)
+
+ # tq_get("2330.tw",get = "stock.prices", from = "2010-01-01") 
+ # tq_get("2330.tw",get = "dividends", from = "2010-01-01")
+
+```
+
+```{r}
+tq_get("AAPL", get = "financials")
+
+```
+
+Google Finance stopped providing data in March, 2018. 
+We are currently looking for alternative financial data sources. 
+
+```{r}
+quandl_api_key("xDAJeKRyx-npLSn41BrW")
+```
+
+```{r}
+
+quandl_search(query = "Oil", database_code = "NSE", per_page = 3)
+```
+
+```{r}
+tq_get("EUR/USD",get = "exchange.rates")
+
+```
+

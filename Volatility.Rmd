@@ -1,0 +1,60 @@
+---
+title: "Volatility"
+author: "Boon Hong"
+date: "January 25, 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+introduction to Volatility
+
+```{r setup}
+source("pgload.R")
+`load pg`("fin")
+
+```
+
+```{r}
+library(tidyquant)
+symbols <- c("SPY","GOOG")
+
+price <- 
+  symbols %>% 
+    getSymbols(auto.assign = T,from = "2013-01-01") %>% 
+      map(function(x){
+        get(x) %>% 
+          Cl()
+      }) %>% 
+      reduce(merge) %>% 
+      `colnames<-`(symbols) 
+
+price %>% head
+library(PerformanceAnalytics)
+price %>% 
+  as_tibble() %>% 
+  mutate(date=ymd(index(price))) %>% 
+  select(date,everything()) %>% 
+  gather(asset , return , -date) %>% 
+  group_by(asset) %>% 
+  tq_transmute(mutate_fun = periodReturn , period = "monthly") %>% 
+  spread(asset,monthly.returns) -> test  
+  
+  xts(test[,-1] , order.by = test$date) -> df.xts.test
+
+```
+
+tq_transmute  data format must be long format
+
+```{r}
+df.xts.test %>% 
+  cov -> portfolio_component_monthly_returns_xts
+
+  portfolio_sd <- StdDev(portfolio_component_monthly_returns_xts, weights = weights)
+  portfolio_sd_percent <- round(portfolio_sd * 100, 2)
+  
+dygraph()
+
+
+```
+
