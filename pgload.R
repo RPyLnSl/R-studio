@@ -6,19 +6,18 @@ options(prompt = "$ ")
 suppressMessages(
   library(tidyverse) 
 )
-
 suppressMessages(
   require(rio) 
 )
 suppressMessages(
   require(magrittr)
 )
-suppressMessages(
-  library(ggplot2)
-)
-# multiplot(p1, p2, p3, p4, cols=2)
-`load pg` <- function(x){
-  if (x == "fin" ){
+# suppressMessages(
+#   library(ggplot2)
+# )
+
+fc.load <- function(x){
+  if (x == "fin"){
     suppressMessages(
       require(quantmod)
     )
@@ -28,15 +27,29 @@ suppressMessages(
     suppressMessages(
       require(tseries)
     )
-    cat(
-      "\n # time series # \n\n" ,
-      "johansen => ", "urca\n" ,  
-      "VECM model => " ,"tsDyn\n",
-      "var models => ","vars \n" ,
-      "engle and granger => ", "egcm\n\n"
+    suppressMessages(
+      require(PerformanceAnalytics)
+    )
+    suppressMessages(
+      require(dygraphs)
+    )
+    suppressMessages(
+      library(tidyquant)  
+    )
+    suppressMessages(
+      library(timetk)  
+    )
+    suppressMessages(
+      library(highcharter)
+    )
+    suppressMessages(
+      library(padr)
+    )
+    suppressMessages(
+      library(padr)
     )
     print("loading financial package")
-  }  
+  }
   else if (x == ("text") ){
     suppressMessages(
       require(jiebaR)
@@ -62,7 +75,7 @@ suppressMessages(
     suppressMessages(
       library(ggraph)
     )
-     suppressMessages(
+    suppressMessages(
       library(gutenbergr)
     )
     suppressMessages(
@@ -93,6 +106,13 @@ suppressMessages(
     
   }
   else if (x == c("stat")){
+    
+    # stat.package <- c("car","e1071",
+    #   "C50","party","rpart.plot",
+    #   "rpart","rattle","randomForest")
+    
+    # if(!require(stat.package[2])) print("1")
+    
     suppressMessages(
       require(car) # linear regression
     )
@@ -124,6 +144,18 @@ suppressMessages(
   }
   
 }
+fc.show <- function(show=F){
+  if(show==T){
+    cat(
+      "\n # time series # \n\n" ,
+      "\n method -- package\n" ,
+      "johansen => ", "urca\n" ,  
+      "VECM model => " ,"tsDyn\n",
+      "var models => ","vars \n" ,
+      "engle and granger => ", "egcm\n\n"
+    )
+  }
+}  
 ## function ##
 
 # Multiple plot function
@@ -136,36 +168,36 @@ suppressMessages(
 # then plot 1 will go in the upper left, 2 will go in the upper right, and
 # 3 will go all the way across the bottom.
 #
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+fc.multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   library(grid)
-
+  
   # Make a list from the ... arguments and plotlist
   plots <- c(list(...), plotlist)
-
+  
   numPlots = length(plots)
-
+  
   # If layout is NULL, then use 'cols' to determine layout
   if (is.null(layout)) {
     # Make the panel
     # ncol: Number of columns of plots
     # nrow: Number of rows needed, calculated from # of cols
     layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                    ncol = cols, nrow = ceiling(numPlots/cols))
+                     ncol = cols, nrow = ceiling(numPlots/cols))
   }
-
- if (numPlots==1) {
+  
+  if (numPlots==1) {
     print(plots[[1]])
-
+    
   } else {
     # Set up the page
     grid.newpage()
     pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-
+    
     # Make each plot, in the correct location
     for (i in 1:numPlots) {
       # Get the i,j matrix positions of the regions that contain this subplot
       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-
+      
       print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
                                       layout.pos.col = matchidx$col))
     }
@@ -173,4 +205,4 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 }
 
 
-cat("update at 2019-01-04")
+cat("update at 2019-02-09\n")
